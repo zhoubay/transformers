@@ -42,9 +42,9 @@ from ...utils import (
     logging,
     replace_return_docstrings,
 )
-from .configuration_evolla import EvollaConfig, EvollaLLMConfig
+from .configuration_evolla import EvollaConfig, EvollaLLMConfig, EvollaProteinConfig
 from .sequence_compressor import SequenceCompressorResampler
-from .protein import EvollaProteinEncoder
+from .protein import SaProtProteinEncoder, ProteinEncoderModelOutput
 from .sequence_aligner import CrossAttention
 
 
@@ -806,6 +806,7 @@ class EvollaAttention(nn.Module):
         self.layer_idx = layer_idx
         self.head_dim = getattr(config, "head_dim", config.hidden_size // config.num_attention_heads)
         self.num_key_value_groups = config.num_attention_heads // config.num_key_value_heads
+        assert self.num_key_value_groups > 0, f"In {self._get_name()} num_attention_heads ({config.num_attention_heads}) must be larger than num_key_value_heads ({config.num_key_value_heads})"
         self.scaling = self.head_dim**-0.5
         self.attention_dropout = config.attention_dropout
         self.is_causal = True
@@ -1199,6 +1200,62 @@ class EvollaPreTrainedModel(PreTrainedModel):
                 module.weight.data[module.padding_idx].zero_()
 
 
+class EvollaProteinEncoder(EvollaPreTrainedModel):
+    def __init__(self, config: EvollaProteinConfig):
+        super().__init__(config)
+        self.model = SaProtProteinEncoder(config.protein_encoder_config)
+        self.sequence_compressor_resampler = SequenceCompressorResampler(config.resampler_config) # TODO
+        self.post_init()
+    
+    def sequence_encode(
+        self,
+        input_ids: torch.LongTensor,
+        attention_mask: torch.FloatTensor,
+        return_dict: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+    ):
+        sequence_repr = self.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            return_dict=return_dict,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+        )
+
+        return sequence_repr
+
+    def forward(
+        self,
+        input_ids: torch.LongTensor,
+        attention_mask: torch.FloatTensor,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+        **kwargs
+    ):
+        protein_output = self.sequence_encode(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            return_dict=True,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+        )
+
+        # TODO: could be replaced by last hidden state
+        protein_embeds = protein_output.last_hidden_state
+
+        sequence_repr = self.sequence_compressor_resampler(protein_embeds, attention_mask)
+
+        if not return_dict:
+            return sequence_repr, protein_embeds, attention_mask
+
+        return ProteinEncoderModelOutput(
+            sequence_compressor_output=sequence_repr,
+            last_hidden_state=protein_output.last_hidden_state,
+            hidden_states=protein_output.hidden_states,
+            attentions=protein_output.attentions,
+        )
 
 LLAMA_INPUTS_DOCSTRING = r"""
     Args:

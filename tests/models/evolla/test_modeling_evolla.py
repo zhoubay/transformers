@@ -44,7 +44,7 @@ from transformers import EsmTokenizer, LlamaTokenizerFast
 
 from ...generation.test_utils import GenerationTesterMixin
 from ...test_configuration_common import ConfigTester
-from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask
+from ...test_modeling_common import ModelTesterMixin, floats_tensor, ids_tensor, random_attention_mask, _config_zero_init
 from ...test_pipeline_mixin import PipelineTesterMixin
 
 
@@ -73,6 +73,7 @@ class EvollaModelTester:
         hidden_size=4, # llama hidden size
         num_hidden_layers=1, # llama hidden layers
         num_attention_heads=2, # llama attention heads
+        num_key_value_heads=2, # llama key value heads
         protein_hidden_size=8, # protein encoder hidden size
         protein_num_hidden_layers=1, # protein encoder hidden layers
         protein_num_attention_heads=4, # protein encoder attention heads
@@ -93,6 +94,7 @@ class EvollaModelTester:
         self.hidden_size = hidden_size
         self.num_hidden_layers = num_hidden_layers
         self.num_attention_heads = num_attention_heads
+        self.num_key_value_heads = num_key_value_heads
         self.protein_hidden_size = protein_hidden_size
         self.protein_num_hidden_layers = protein_num_hidden_layers
         self.protein_num_attention_heads = protein_num_attention_heads
@@ -130,6 +132,7 @@ class EvollaModelTester:
                     "num_hidden_layers": self.num_hidden_layers,
                     "hidden_size": self.hidden_size,
                     "num_attention_heads": self.num_attention_heads,
+                    "num_key_value_heads": self.num_key_value_heads,
                 },
                 "sequence_aligner_config": {
                     "num_add_layers": self.sequence_aligner_num_add_layers,
@@ -358,6 +361,25 @@ class EvollaModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase):
                 list(self_attentions[0].shape[-3:]),
                 [self.model_tester.num_attention_heads, encoder_seq_length, encoder_key_length],
             )
+
+    def test_initialization(self):
+        # we skip the latents initialization test
+        config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
+
+        configs_no_init = _config_zero_init(config)
+        for model_class in self.all_model_classes:
+            model = model_class(config=configs_no_init)
+            for name, param in model.named_parameters():
+                if param.requires_grad:
+                    # skip latents
+                    if name.endswith("latents"):
+                        print(f"Skipping latents {name}")
+                        continue
+                    self.assertIn(
+                        ((param.data.mean() * 1e9).round() / 1e9).item(),
+                        [0.0, 1.0],
+                        msg=f"Parameter {name} of model {model_class} seems not properly initialized",
+                    )
 
     @parameterized.expand([("float16",), ("bfloat16",), ("float32",)])
     @require_torch_sdpa
