@@ -1870,6 +1870,9 @@ class EvollaModel(EvollaPreTrainedModel):
     def get_input_embeddings(self):
         return self.llm.get_input_embeddings()
 
+    def set_input_embeddings(self, value):
+        self.llm.embed_tokens = value
+
 @add_start_docstrings(
     "The bare LLaMA Model outputting raw hidden-states without any specific head on top.",
     LLAMA_START_DOCSTRING,
