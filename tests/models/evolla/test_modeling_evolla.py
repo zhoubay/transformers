@@ -174,39 +174,25 @@ class EvollaModelTester:
 @require_torch
 class EvollaModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase):
     all_model_classes = (EvollaModel,) if is_torch_available() else ()
+    pipeline_model_mapping = (
+        {"feature-extraction": EvollaModel}
+        if is_torch_available()
+        else {}
+    )
     test_pruning = False
     test_headmasking = False
     test_torchscript = False
+    test_resize_embeddings = False
 
     def setUp(self):
         self.model_tester = EvollaModelTester(self)
         self.config_tester = ConfigTester(self, config_class=EvollaConfig, hidden_size=37)
         self.is_encoder_decoder = self.model_tester.is_encoder_decoder
+        # protein_tokenizer = EsmTokenizer.from_pretrained("/zhouxibin/workspaces/ProteinQA/Models/SaProt_35M_AF2")
+        # tokenizer = LlamaTokenizerFast.from_pretrained("/zhouxibin/workspaces/ProteinQA/Models/meta-llama_Meta-Llama-3-8B-Instruct")
+        # self.processor = EvollaProcessor(protein_tokenizer, tokenizer)
+        self.processor = EvollaProcessor.from_pretrained("/zhouxibin/workspaces/transformers/src/transformers/models/evolla/evolla-base")
 
-    # def setUp(self):
-    #     self.model_tester = EvollaModelTester(self)
-    #     config, inputs_dict = self.model_tester.prepare_config_and_inputs_for_common()
-    #     print(torch.cuda.memory_summary(device=torch_device, abbreviated=True))
-    #     self.model = EvollaModel(EvollaConfig()).eval()
-    #     self.model = self.model.to(torch_device)
-    #     print(torch.cuda.memory_summary(device=torch_device, abbreviated=True))
-    #     with torch.no_grad():
-    #         base_output = self.model(**inputs_dict)
-    #         print(torch.cuda.memory_summary(device=torch_device, abbreviated=True))
-
-        
-    #     import tempfile
-    #     with tempfile.TemporaryDirectory() as tmp_dir:
-    #         self.model.cpu().save_pretrained(tmp_dir)
-    #         print(torch.cuda.memory_summary(device=torch_device, abbreviated=True))
-    #         max_memory = {0: 27631539320, 'cpu': 78947255200}
-    #         new_model = EvollaModel.from_pretrained(tmp_dir, device_map="auto", max_memory=max_memory)
-    #         print(torch.cuda.memory_summary(device=torch_device, abbreviated=True))
-        
-    #     raise ValueError("This test is not ready yet.")
-    #     protein_tokenizer = EsmTokenizer.from_pretrained("/zhouxibin/workspaces/ProteinQA/Models/SaProt_35M_AF2")
-    #     tokenizer = LlamaTokenizerFast.from_pretrained("/zhouxibin/workspaces/ProteinQA/Models/meta-llama_Meta-Llama-3-8B-Instruct")
-    #     self.processor = EvollaProcessor(protein_tokenizer, tokenizer)
 
     def prepare_input_and_expected_output(self):
         amino_acid_sequence = "AAAA"
@@ -239,7 +225,7 @@ class EvollaModelTest(ModelTesterMixin, PipelineTesterMixin, unittest.TestCase):
         
         # check if the input is correct
         for key, value in expected_output.items():
-            self.assertTrue(torch.equal(inputs[key], value))
+            self.assertTrue(torch.equal(inputs[key], value), f"inputs[key] is {inputs[key]} and expected_output[key] is {expected_output[key]}")
 
     def test_saprot_output(self):
         protein_dict, message, expected_output = self.prepare_input_and_expected_output()
