@@ -1227,7 +1227,7 @@ else:
     _import_structure["models.glpn"].extend(["GLPNFeatureExtractor", "GLPNImageProcessor"])
     _import_structure["models.grounding_dino"].extend(["GroundingDinoImageProcessor"])
     _import_structure["models.idefics"].extend(["IdeficsImageProcessor"])
-    _import_structure["models.evolla"].extend(["EvollaProteinProcessor"])
+    _import_structure["models.evolla"].extend(["EvollProcessor"])
     _import_structure["models.idefics2"].extend(["Idefics2ImageProcessor"])
     _import_structure["models.idefics3"].extend(["Idefics3ImageProcessor"])
     _import_structure["models.imagegpt"].extend(["ImageGPTFeatureExtractor", "ImageGPTImageProcessor"])
@@ -4355,7 +4355,7 @@ else:
     )
     _import_structure["models.evolla"].extend(
         [
-            "TFEvollaForVisionText2Text",
+            "TFEvollaForProteinText2Text",
             "TFEvollaModel",
             "TFEvollaPreTrainedModel",
         ]
@@ -6290,7 +6290,7 @@ if TYPE_CHECKING:
         from .models.glpn import GLPNFeatureExtractor, GLPNImageProcessor
         from .models.grounding_dino import GroundingDinoImageProcessor
         from .models.idefics import IdeficsImageProcessor
-        from .models.evolla import EvollaProteinProcessor
+        from .models.evolla import EvollaProcessor
         from .models.idefics2 import Idefics2ImageProcessor
         from .models.idefics3 import Idefics3ImageProcessor
         from .models.imagegpt import ImageGPTFeatureExtractor, ImageGPTImageProcessor
@@ -7382,7 +7382,7 @@ if TYPE_CHECKING:
             IdeficsProcessor,
         )
         from .models.evolla import (
-            EvollaForVisionText2Text,
+            EvollaForProteinText2Text,
             EvollaModel,
             EvollaPreTrainedModel,
             EvollaProcessor,
@@ -8816,7 +8816,7 @@ if TYPE_CHECKING:
             TFIdeficsPreTrainedModel,
         )
         from .models.evolla import (
-            TFEvollaForVisionText2Text,
+            TFEvollaForProteinText2Text,
             TFEvollaModel,
             TFEvollaPreTrainedModel,
         )
